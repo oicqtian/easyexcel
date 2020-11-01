@@ -3,6 +3,8 @@ package com.alibaba.excel.util;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -24,6 +26,8 @@ public class DateUtils {
      */
     private static final ThreadLocal<Map<String, SimpleDateFormat>> DATE_FORMAT_THREAD_LOCAL =
         new ThreadLocal<Map<String, SimpleDateFormat>>();
+
+    private static final ThreadLocal<Map<String, DateTimeFormatter>> LOCAL_DATE_FORMAT_THREAD_LOCAL = new ThreadLocal<Map<String, DateTimeFormatter>>();
 
     /**
      * The following patterns are used in {@link #isADateFormat(Integer, String)}
@@ -76,6 +80,14 @@ public class DateUtils {
         return parseDate(dateString, switchDateFormat(dateString));
     }
 
+    public static LocalDateTime parseLocalDate(String dateString, String dateFormat) throws ParseException {
+        if (StringUtils.isEmpty(dateFormat)) {
+            dateFormat = switchDateFormat(dateString);
+        }
+        DateTimeFormatter dateTimeFormatter = getCacheLocalDateTimeFormat(dateFormat);
+        return LocalDateTime.parse(dateString, dateTimeFormatter);
+    }
+
     /**
      * switch date format
      *
@@ -100,6 +112,34 @@ public class DateUtils {
             default:
                 throw new IllegalArgumentException("can not find date format for：" + dateString);
         }
+    }
+
+
+    public static String formatLocalDate(LocalDateTime date, String dateFormat) {
+        if (date == null) {
+            return "";
+        }
+        if (StringUtils.isEmpty(dateFormat)) {
+            dateFormat = DATE_FORMAT_19;
+        }
+        return getCacheLocalDateTimeFormat(dateFormat).format(date);
+    }
+
+    private static DateTimeFormatter getCacheLocalDateTimeFormat(String dateFormat) {
+        Map<String, DateTimeFormatter> dateFormatMap = LOCAL_DATE_FORMAT_THREAD_LOCAL.get();
+        if (dateFormatMap == null) {
+            dateFormatMap = new HashMap<>();
+            LOCAL_DATE_FORMAT_THREAD_LOCAL.set(dateFormatMap);
+        } else {
+            DateTimeFormatter dateFormatCached = dateFormatMap.get(dateFormat);
+            if (dateFormatCached != null) {
+                return dateFormatCached;
+            }
+        }
+
+        DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern(dateFormat);
+        dateFormatMap.put(dateFormat, dateTimeFormatter);
+        return dateTimeFormatter;
     }
 
     /**
